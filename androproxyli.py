@@ -1,6 +1,7 @@
 import requests
 import re
 import os
+import json
 
 def get_DeaTHLesS_streams():
     """DeaTHLesS IPTV stream'lerini al"""
@@ -202,13 +203,38 @@ def discover_additional_channels(base_url, proxies, logo_url):
     
     return additional_content
 
-def save_m3u_file(content):
+def save_m3u_file(content, output_dir="output"):
     """M3U dosyasını kaydet"""
-    file_path = "/storage/emulated/0/DeaTHlesS-Androiptv.m3u"
     try:
+        # Output klasörünü oluştur
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Ana M3U dosyası
+        file_path = os.path.join(output_dir, "DeaTHlesS-Androiptv.m3u")
         with open(file_path, "w", encoding="utf-8") as f:
             f.write("#EXTM3U\n")
             f.write(content)
+        
+        # JSON formatında da kaydet (opsiyonel)
+        json_path = os.path.join(output_dir, "channels.json")
+        channels = []
+        lines = content.split('\n')
+        for i in range(len(lines)):
+            if lines[i].startswith('#EXTINF'):
+                channel_info = lines[i]
+                if i+1 < len(lines) and not lines[i+1].startswith('#'):
+                    channels.append({
+                        "name": channel_info.split(',')[-1] if ',' in channel_info else channel_info,
+                        "url": lines[i+1],
+                        "info": channel_info
+                    })
+        
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "total_channels": len(channels),
+                "channels": channels,
+                "generated_at": os.path.getctime(file_path)
+            }, f, indent=2, ensure_ascii=False)
         
         # Dosya boyutunu kontrol et
         file_size = os.path.getsize(file_path)
@@ -216,10 +242,10 @@ def save_m3u_file(content):
         print(f"📁 Dosya boyutu: {file_size} bytes")
         print(f"📊 Toplam kanal: {content.count('#EXTINF')}")
         
-        return True
+        return file_path
     except Exception as e:
         print(f"❌ Dosya kaydetme hatası: {e}")
-        return False
+        return None
 
 if __name__ == "__main__":
     print("=" * 50)
@@ -229,16 +255,32 @@ if __name__ == "__main__":
     m3u_data = get_DeaTHLesS_streams()
     
     if m3u_data:
-        save_m3u_file(m3u_data)
-        print("\n" + "=" * 50)
-        print("✅ İŞLEM TAMAMLANDI!")
-        print("=" * 50)
-        print("\n📡 M3U dosyası hazır!")
-        print("📱 Dosyayı herhangi bir IPTV oynatıcı ile açabilirsiniz:")
-        print("   - VLC Media Player")
-        print("   - IPTV Smarters Pro")
-        print("   - TiviMate")
-        print("   - Kodi")
-        print("\n📍 Dosya konumu: /storage/emulated/0/DeaTHlesS-Androiptv.m3u")
+        saved_file = save_m3u_file(m3u_data, output_dir=".")
+        if saved_file:
+            print(f"\n📂 Dosya: {os.path.basename(saved_file)}")
+            print(f"📂 Klasör: {os.path.dirname(saved_file)}")
+            
+            # GitHub için özel mesaj
+            print("\n" + "=" * 50)
+            print("✅ GITHUB ACTIONS İŞLEMİ TAMAMLANDI!")
+            print("=" * 50)
+            print("\n📡 M3U dosyası oluşturuldu!")
+            print("📤 Dosya repo'ya otomatik commit edilecek.")
+            
+            # Dosya içeriğini göster (ilk 5 kanal)
+            print("\n📺 İlk 5 kanal:")
+            lines = m3u_data.split('\n')
+            count = 0
+            for line in lines:
+                if line.startswith('#EXTINF'):
+                    print(f"   • {line.split(',')[-1]}")
+                    count += 1
+                    if count >= 5:
+                        break
+        else:
+            print("\n❌ M3U dosyası oluşturulamadı!")
     else:
         print("\n❌ Kaydedilecek veri bulunamadı!")
+    
+    # GitHub Actions için başarılı çıkış kodu
+    exit(0)
