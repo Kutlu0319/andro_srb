@@ -1,286 +1,287 @@
 import requests
-import re
 import os
 import json
+import time
+import concurrent.futures
+from urllib.parse import quote
+import sys
 
-def get_DeaTHLesS_streams():
-    """DeaTHLesS IPTV stream'lerini al"""
+PROXY_PREFIX = "https://proxy.freecdn.workers.dev/?url="  # 🔥 EKLENEN BÖLÜM
+
+def test_proxy_speed(proxy_url, test_url="https://httpbin.org/ip", timeout=3):
+    try:
+        start_time = time.time()
+        response = requests.get(test_url, timeout=timeout, 
+                              proxies={"http": proxy_url, "https": proxy_url})
+        if response.status_code == 200:
+            speed = time.time() - start_time
+            return proxy_url, speed, True
+    except:
+        pass
+    return proxy_url, 10, False
+
+def get_fastest_proxies():
+    print("⚡ GitHub Actions için proxy test ediliyor...")
     
-    print("🔍 Aktif domain aranıyor...")
-    active_domain = None
-    for i in range(42, 200):
-        url = f"https://birazcikspor{i}.xyz/"
+    workers = [
+        ("CF-Proxy", "https://withered-shape-3305.vadimkantorov.workers.dev/?"),
+        ("Rapid-Proxy", "https://rapid-wave-c8e3.redfor14314.workers.dev/"),
+        ("Cors-Free", "https://proxy.freecdn.workers.dev/?url="),
+        ("Hello-World", "https://hello-world-aged-resonance-fc8f.bokaflix.workers.dev/?apiUrl="),
+        ("AllOrigins", "https://api.allorigins.win/raw?url="),
+    ]
+    
+    fast_proxies = []
+    for name, url in workers:
+        fast_proxies.append(url)
+        print(f"   ✅ {name} eklendi")
+    
+    if os.environ.get('GITHUB_ACTIONS') == 'true':
+        print("🚀 GitHub Actions ortamında çalışıyor")
+        extra_workers = [
+            "https://cors-anywhere.herokuapp.com/",
+            "https://thingproxy.freeboard.io/fetch/",
+            "https://yacdn.org/proxy/",
+        ]
+        fast_proxies.extend(extra_workers)
+    
+    fast_proxies.append("direct")
+    return fast_proxies[:10]
+
+def check_url_with_proxy(url, proxies, timeout=5):
+    try:
+        response = requests.head(url, timeout=timeout)
+        if response.status_code == 200:
+            return url, "direct"
+    except:
+        pass
+    
+    for proxy in proxies:
+        if proxy == "direct":
+            continue
+            
         try:
-            response = requests.head(url, timeout=5)
+            if proxy.endswith("?") or "?url=" in proxy or "?quest=" in proxy or "apiUrl=" in proxy or "/raw?url=" in proxy:
+                proxy_url = f"{proxy}{quote(url, safe='')}" if "allorigins.win" in proxy else f"{proxy}{url}"
+            elif "/proxy/" in proxy or "/fetch/" in proxy:
+                proxy_url = f"{proxy}{url}"
+            elif proxy.startswith("http://") or proxy.startswith("https://"):
+                proxies_dict = {"http": proxy, "https": proxy}
+                response = requests.head(url, timeout=timeout, proxies=proxies_dict)
+                if response.status_code == 200:
+                    return url, proxy
+                continue
+            else:
+                continue
+                
+            response = requests.head(proxy_url, timeout=timeout)
             if response.status_code == 200:
-                active_domain = url
-                print(f"✅ Aktif domain bulundu: {active_domain}")
-                break
+                return proxy_url, proxy
         except:
             continue
     
-    if not active_domain:
-        print("❌ Aktif domain bulunamadı")
-        return ""
-    
-    # Keşfedilen base URL
-    base_url = "https://andro.226503.xyz/checklist/"
-    print(f"🎯 Kullanılan base URL: {base_url}")
-    
-    return create_m3u_with_baseurl(base_url)
+    return None, None
 
-def create_m3u_with_baseurl(base_url):
-    """Base URL ile M3U içeriği oluştur"""
-    m3u_content = ""
+def get_active_base_url(proxies):
+    print("\n🔍 Aktif domain aranıyor...")
     
-    # Proxy listesi
-    proxies = [
-        "https://rapid-wave-c8e3.redfor14314.workers.dev/",
-        "https://proxy.ponelat.workers.dev/",
-        "https://proxy.freecdn.workers.dev/?url=",
-        "https://withered-shape-3305.vadimkantorov.workers.dev/?",
-        "https://wandering-sky-a896.cbracketdash.workers.dev/?",
-        "https://hello-world-aged-resonance-fc8f.bokaflix.workers.dev/?apiUrl=",
-        "https://cors.gerhut.workers.dev/?"
+    priority_domains = [
+        "https://andro.226503.xyz/checklist/",
+        "https://androiptv.fun/checklist/",
+        "https://birazcikspor.xyz/checklist/",
+        "https://androstream.live/checklist/",
     ]
     
-    # Ana kanal listesi
-    channels = [
-        # Spor Kanalları
-        ["beIN Sport 1 HD", "androstreamlivebs1"],
-        ["beIN Sport 2 HD", "androstreamlivebs2"],
-        ["beIN Sport 3 HD", "androstreamlivebs3"],
-        ["beIN Sport 4 HD", "androstreamlivebs4"],
-        ["beIN Sport 5 HD", "androstreamlivebs5"],
-        ["beIN Sport Max 1 HD", "androstreamlivebsm1"],
-        ["beIN Sport Max 2 HD", "androstreamlivebsm2"],
-        ["S Sport 1 HD", "androstreamlivess1"],
-        ["S Sport 2 HD", "androstreamlivess2"],
-        ["Tivibu Sport HD", "androstreamlivets"],
-        ["Tivibu Sport 1 HD", "androstreamlivets1"],
-        ["Tivibu Sport 2 HD", "androstreamlivets2"],
-        ["Tivibu Sport 3 HD", "androstreamlivets3"],
-        ["Tivibu Sport 4 HD", "androstreamlivets4"],
-        ["Smart Sport 1 HD", "androstreamlivesm1"],
-        ["Smart Sport 2 HD", "androstreamlivesm2"],
-        ["Euro Sport 1 HD", "androstreamlivees1"],
-        ["Euro Sport 2 HD", "androstreamlivees2"],
-        
-        # Dijital Platformlar
-        ["Tabii HD", "androstreamlivetb"],
-        ["Tabii 1 HD", "androstreamlivetb1"],
-        ["Tabii 2 HD", "androstreamlivetb2"],
-        ["Tabii 3 HD", "androstreamlivetb3"],
-        ["Tabii 4 HD", "androstreamlivetb4"],
-        ["Tabii 5 HD", "androstreamlivetb5"],
-        ["Tabii 6 HD", "androstreamlivetb6"],
-        ["Tabii 7 HD", "androstreamlivetb7"],
-        ["Tabii 8 HD", "androstreamlivetb8"],
-        ["Exxen HD", "androstreamliveexn"],
-        ["Exxen 1 HD", "androstreamliveexn1"],
-        ["Exxen 2 HD", "androstreamliveexn2"],
-        ["Exxen 3 HD", "androstreamliveexn3"],
-        ["Exxen 4 HD", "androstreamliveexn4"],
-        ["Exxen 5 HD", "androstreamliveexn5"],
-        ["Exxen 6 HD", "androstreamliveexn6"],
-        ["Exxen 7 HD", "androstreamliveexn7"],
-        ["Exxen 8 HD", "androstreamliveexn8"],
-        
-        # Facebook Stream'leri
-        ["Facebook beIN Sport 1", "facebooklivebs1"],
-        ["Facebook beIN Sport 2", "facebooklivebs2"],
-        ["Facebook S Sport 1", "facebooklivess1"],
-        ["Facebook Tivibu Sport", "facebooklivets"],
+    test_channels = [
+        "androstreamlivebs1",
+        "androstreamlivess1",
+        "androstreamlivets"
     ]
     
-    successful_channels = []
-    logo_url = "https://i.hizliresim.com/8xzjgqv.jpg"
+    for domain in priority_domains:
+        for channel in test_channels:
+            test_url = f"{domain}{channel}.m3u8"
+            stream_url, used_proxy = check_url_with_proxy(test_url, proxies, timeout=3)
+            if stream_url:
+                print(f"✅ Aktif domain: {domain} (via {used_proxy})")
+                return domain
     
-    print(f"🔗 {len(channels)} kanal test ediliyor...")
+    print("⚠  Öncelikli domainler çalışmıyor, alternatifler taranıyor...")
     
-    for channel_name, channel_id in channels:
-        original_url = f"{base_url}{channel_id}.m3u8"
-        stream_added = False
-        
-        # Önce doğrudan dene
+    for i in range(1, 30):
+        domain = f"https://birazcikspor{i}.xyz/checklist/"
+        test_url = f"{domain}androstreamlivebs1.m3u8"
         try:
-            response = requests.head(original_url, timeout=5)
+            response = requests.head(test_url, timeout=2)
             if response.status_code == 200:
-                m3u_content += f'#EXTINF:-1 tvg-id="sport.tr" tvg-name="TR:{channel_name}" tvg-logo="{logo_url}" group-title="TURKIYE DEATHLESS",TR:{channel_name}\n'
-                m3u_content += f"{original_url}\n"
-                successful_channels.append(channel_name)
-                print(f"✅ {channel_name}")
-                stream_added = True
+                print(f"✅ Alternatif domain: {domain}")
+                return domain
         except:
-            pass
+            continue
+    
+    default_domain = "https://andro.226503.xyz/checklist/"
+    print(f"⚠  Varsayılan domain: {default_domain}")
+    return default_domain
+
+def get_DeaTHLesS_streams():
+    print("=" * 60)
+    print("🚀 DeaTHLesS IPTV Bot - GitHub Actions Optimize")
+    print("=" * 60)
+    
+    proxies = get_fastest_proxies()
+    print(f"📊 Kullanılacak proxy sayısı: {len(proxies)}")
+    
+    base_url = get_active_base_url(proxies)
+    
+    print(f"\n📡 Kanal listesi oluşturuluyor: {base_url}")
+    
+    channels = get_channel_list()
+    
+    m3u_content = "#EXTM3U\n"
+    m3u_content += "# DeaTHLesS IPTV - GitHub Actions\n"
+    m3u_content += f"# Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+    m3u_content += f"# Base URL: {base_url}\n\n"
+    
+    successful = 0
+    total = len(channels)
+    
+    for name, channel_id in channels:
+        url = f"{base_url}{channel_id}.m3u8"
+        stream_url, proxy_used = check_url_with_proxy(url, proxies)
         
-        # Proxy gerekirse
-        if not stream_added:
-            for proxy in proxies:
-                try:
-                    if "?url=" in proxy or proxy.endswith("?") or "apiUrl=" in proxy:
-                        proxy_url = f"{proxy}{original_url}"
-                    else:
-                        proxy_url = f"{proxy}{original_url}"
-                    
-                    response = requests.head(proxy_url, timeout=5)
-                    if response.status_code == 200:
-                        m3u_content += f'#EXTINF:-1 tvg-id="sport.tr" tvg-name="TR:{channel_name}" tvg-logo="{logo_url}" group-title="TURKIYE DEATHLESS",TR:{channel_name}\n'
-                        m3u_content += f"{proxy_url}\n"
-                        successful_channels.append(channel_name)
-                        print(f"✅ {channel_name} (Proxy)")
-                        stream_added = True
-                        break
-                except:
-                    continue
+        if stream_url:
+            logo_url = "https://i.hizliresim.com/8xzjgqv.jpg"
+            m3u_content += f'#EXTINF:-1 tvg-id="sport.tr" tvg-name="TR:{name}" tvg-logo="{logo_url}" group-title="TURKIYE",{name}\n'
             
-            if not stream_added:
-                print(f"❌ {channel_name}")
+            # 🔥 TÜM LİNKLER BURADA ZORUNLU OLARAK PROXY PREFIX İLE YAZILIYOR
+            m3u_content += f"{PROXY_PREFIX}{url}\n"
+
+            successful += 1
+            print(f"✅ {name}")
+        else:
+            print(f"❌ {name}")
     
-    print(f"\n📊 Toplam bulunan kanal: {len(successful_channels)}/{len(channels)}")
+    print(f"\n📊 Sonuç: {successful}/{total} kanal bulundu")
     
-    # Ek kanal keşfi
-    if successful_channels:
-        print("\n🔍 Ek kanallar keşfediliyor...")
-        additional = discover_additional_channels(base_url, proxies, logo_url)
-        if additional:
-            m3u_content += additional
-            print(f"➕ Ek {len(additional.split('#EXTINF'))-1} kanal eklendi")
+    if successful < 5:
+        print("\n⚠ Çok az kanal bulundu, alternatif yöntem deneniyor...")
+        alt_content = try_alternative_method(base_url)
+        if alt_content:
+            m3u_content += alt_content
+            print("✅ Alternatif yöntemle kanallar eklendi")
     
     return m3u_content
 
-def discover_additional_channels(base_url, proxies, logo_url):
-    """Ek kanalları keşfet"""
-    additional_content = ""
-    
-    # Pattern'ler ve numara aralıkları
-    patterns = {
-        "androstreamlivebs": (1, 10),   # beIN Sports
-        "androstreamlivess": (1, 5),    # S Sports  
-        "androstreamlivets": (1, 10),   # Tivibu Sports
-        "androstreamlivees": (1, 5),    # Euro Sports
-        "androstreamliveexn": (1, 10),  # Exxen
-        "androstreamlivetb": (1, 10),   # Tabii
-        "androstreamlivesm": (1, 5),    # Smart Sport
-        "facebooklivebs": (1, 5),       # Facebook beIN
-        "facebooklivess": (1, 5),       # Facebook S Sport
-        "facebooklivets": (1, 5),       # Facebook Tivibu
-    }
-    
-    discovered = 0
-    
-    for pattern, (start, end) in patterns.items():
-        for i in range(start, end + 1):
-            channel_id = f"{pattern}{i}"
-            channel_name = f"{pattern}{i}"
-            
-            # Zaten eklenmiş mi kontrol et
-            if f"{channel_id}.m3u8" in additional_content:
-                continue
-                
-            test_url = f"{base_url}{channel_id}.m3u8"
-            
-            # Test et
-            for method in ['direct'] + proxies:
-                try:
-                    if method == 'direct':
-                        response = requests.head(test_url, timeout=3)
-                    else:
-                        proxy_url = f"{method}{test_url}" if "?url=" in method or method.endswith("?") or "apiUrl=" in method else f"{method}{test_url}"
-                        response = requests.head(proxy_url, timeout=3)
-                    
-                    if response.status_code == 200:
-                        additional_content += f'#EXTINF:-1 tvg-id="sport.tr" tvg-name="TR:{channel_name}" tvg-logo="{logo_url}" group-title="TURKIYE DEATHLESS",TR:{channel_name}\n'
-                        additional_content += f"{test_url}\n"
-                        discovered += 1
-                        print(f"   🔍 Keşfedildi: {channel_id}")
-                        break
-                except:
-                    continue
-    
-    if discovered:
-        print(f"   🎯 Toplam keşfedilen: {discovered} kanal")
-    
-    return additional_content
+def get_channel_list():
+    return [
+            ["beIN Sport 1 HD", "androstreamlivebs1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Facebook beIN Sport 1", "facebooklivebs1", "https://i.hizliresim.com/8xzjgqv.jpg"]],
+            ["beIN Sport 2 HD", "androstreamlivebs2", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["beIN Sport 3 HD", "androstreamlivebs3", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["beIN Sport 4 HD", "androstreamlivebs4", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["beIN Sport 5 HD", "androstreamlivebs5", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["beIN Sport Max 1 HD", "androstreamlivebsm1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["beIN Sport Max 2 HD", "androstreamlivebsm2", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["beIN Sports Haber HD", "androstreamlivebsh", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["S Sport 1 HD", "androstreamlivess1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Facebook S Sport 1", "facebooklivess1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["S Sport 2 HD", "androstreamlivess2", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["S Sport Plus 1 HD", "androstreamlivessp1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["S Sport Plus 2 HD", "androstreamlivessp2", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tivibu Sport HD", "androstreamlivets", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tivibu Sport 1 HD", "androstreamlivets1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tivibu Sport 2 HD", "androstreamlivets2", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tivibu Sport 3 HD", "androstreamlivets3", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tivibu Sport 4 HD", "androstreamlivets4", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Smart Sport 1 HD", "androstreamlivesm1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Smart Sport 2 HD", "androstreamlivesm2", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Euro Sport 1 HD", "androstreamlivees1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Euro Sport 2 HD", "androstreamlivees2", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["TRT Spor HD", "androstreamlivetrtspor", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["TRT Spor Yıldız HD", "androstreamlivetrtspory", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tabii HD", "androstreamlivetb", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tabii 1 HD", "androstreamlivetb1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tabii 2 HD", "androstreamlivetb2", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tabii 3 HD", "androstreamlivetb3", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tabii 4 HD", "androstreamlivetb4", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tabii 5 HD", "androstreamlivetb5", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tabii 6 HD", "androstreamlivetb6", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tabii 7 HD", "androstreamlivetb7", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Tabii 8 HD", "androstreamlivetb8", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Exxen HD", "androstreamliveexn", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Exxen 1 HD", "androstreamliveexn1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["TRT 1 HD", "androstreamlivetrt1", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["ATV HD", "androstreamliveatv", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["Kanal D HD", "androstreamlivekanald", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["TV 8 HD", "androstreamlivetv8", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["A Spor HD", "androstreamliveaspor", "https://i.hizliresim.com/8xzjgqv.jpg"],
+            ["NBA TV HD", "androstreamlivenba", "https://i.hizliresim.com/8xzjgqv.jpg"]
+    ]
 
-def save_m3u_file(content, output_dir="output"):
-    """M3U dosyasını kaydet"""
+def try_alternative_method(base_url):
+    content = ""
+    
+    channels = [
+        ("beIN Sport 1", "androstreamlivebs1"),
+        ("beIN Sport 2", "androstreamlivebs2"),
+        ("S Sport 1", "androstreamlivess1"),
+        ("Tivibu Sport", "androstreamlivets"),
+    ]
+    
+    for name, channel_id in channels:
+        url = f"{base_url}{channel_id}.m3u8"
+        content += f'#EXTINF:-1 tvg-id="sport.tr" tvg-name="{name}",{name}\n'
+        content += f"{PROXY_PREFIX}{url}\n"  # 🔥 BURADA DA AYNI
+    
+    return content
+
+def save_m3u_file(content):
     try:
-        # Output klasörünü oluştur
-        os.makedirs(output_dir, exist_ok=True)
+        file_name = "androvpnsiz.m3u"
         
-        # Ana M3U dosyası
-        file_path = os.path.join(output_dir, "DeaTHlesS-Androiptv.m3u")
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write("#EXTM3U\n")
+        with open(file_name, "w", encoding="utf-8") as f:
             f.write(content)
         
-        # JSON formatında da kaydet (opsiyonel)
-        json_path = os.path.join(output_dir, "channels.json")
-        channels = []
-        lines = content.split('\n')
-        for i in range(len(lines)):
-            if lines[i].startswith('#EXTINF'):
-                channel_info = lines[i]
-                if i+1 < len(lines) and not lines[i+1].startswith('#'):
-                    channels.append({
-                        "name": channel_info.split(',')[-1] if ',' in channel_info else channel_info,
-                        "url": lines[i+1],
-                        "info": channel_info
-                    })
+        channel_count = content.count('#EXTINF')
         
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump({
-                "total_channels": len(channels),
-                "channels": channels,
-                "generated_at": os.path.getctime(file_path)
-            }, f, indent=2, ensure_ascii=False)
+        print("\n" + "=" * 60)
+        print("✅ İŞLEM TAMAMLANDI!")
+        print("=" * 60)
+        print(f"📂 Dosya: {file_name}")
+        print(f"📊 Toplam Kanal: {channel_count}")
+        print(f"💾 Boyut: {len(content.encode('utf-8'))} bytes")
         
-        # Dosya boyutunu kontrol et
-        file_size = os.path.getsize(file_path)
-        print(f"\n💾 M3U dosyası kaydedildi: {file_path}")
-        print(f"📁 Dosya boyutu: {file_size} bytes")
-        print(f"📊 Toplam kanal: {content.count('#EXTINF')}")
+        return file_name
         
-        return file_path
     except Exception as e:
         print(f"❌ Dosya kaydetme hatası: {e}")
         return None
 
 if __name__ == "__main__":
-    print("=" * 50)
-    print("🚀 DeaTHLesS IPTV Bot - BirazcikSpor Stream")
-    print("=" * 50)
-    
-    m3u_data = get_DeaTHLesS_streams()
-    
-    if m3u_data:
-        saved_file = save_m3u_file(m3u_data, output_dir=".")
-        if saved_file:
-            print(f"\n📂 Dosya: {os.path.basename(saved_file)}")
-            print(f"📂 Klasör: {os.path.dirname(saved_file)}")
+    try:
+        print(f"Python {sys.version}")
+        print(f"Çalışma dizini: {os.getcwd()}")
+        
+        m3u_data = get_DeaTHLesS_streams()
+        
+        if m3u_data and m3u_data.count('#EXTINF') > 0:
+            saved_file = save_m3u_file(m3u_data)
             
-            # GitHub için özel mesaj
-            print("\n" + "=" * 50)
-            print("✅ GITHUB ACTIONS İŞLEMİ TAMAMLANDI!")
-            print("=" * 50)
-            print("\n📡 M3U dosyası oluşturuldu!")
-            print("📤 Dosya repo'ya otomatik commit edilecek.")
-            
-            # Dosya içeriğini göster (ilk 5 kanal)
-            print("\n📺 İlk 5 kanal:")
+            print("\n📋 İlk 5 kanal:")
             lines = m3u_data.split('\n')
             count = 0
             for line in lines:
-                if line.startswith('#EXTINF'):
-                    print(f"   • {line.split(',')[-1]}")
+                if line.startswith('#EXTINF') and count < 5:
+                    name = line.split(',')[-1]
+                    print(f"  {count+1}. {name}")
                     count += 1
-                    if count >= 5:
-                        break
+            
         else:
-            print("\n❌ M3U dosyası oluşturulamadı!")
-    else:
-        print("\n❌ Kaydedilecek veri bulunamadı!")
-    
-    # GitHub Actions için başarılı çıkış kodu
-    exit(0)
+            print("\n❌ HATA: Hiç kanal bulunamadı!")
+            
+    except KeyboardInterrupt:
+        print("\n⏹ İşlem durduruldu")
+    except Exception as e:
+        print(f"\n❌ Beklenmeyen hata: {e}")
+        import traceback
+        traceback.print_exc()
