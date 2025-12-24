@@ -1,40 +1,27 @@
-name: Update M3U
+name: Python CI
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'  # Her 6 saatte bir
-  workflow_dispatch:  # Manuel çalıştırma
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  update:
+  build:
     runs-on: ubuntu-latest
-    
-    permissions:
-      contents: write  # Push yapabilmesi için izin ver
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-    
+    - uses: actions/checkout@v3
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
-    
+        python-version: '3.11'  # kullandığınız sürümü yazın
+
     - name: Install dependencies
       run: |
-        pip install requests
-    
-    - name: Run M3U Generator
-      run: |
-        python androproxyli.py
-    
-    - name: Commit and push if changed
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add DeaTHlesS-Androiptv.m3u
-        git commit -m "Update M3U playlist [$(date +'%Y-%m-%d %H:%M')]" || echo "No changes to commit"
-        git push origin HEAD:${{ github.ref }}
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run script
+      run: python androproxyli.py
