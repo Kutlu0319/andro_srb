@@ -59,63 +59,75 @@ def main():
             if ref: headers['Referer'] = ref
             r = requests.get(PROXY + u, headers=headers, verify=False, timeout=20)
             return r.text if r.status_code == 200 else None
-        except: return None
+        except: 
+            return None
 
     h1 = get_src(START)
-    if not h1: return
+    if not h1: 
+        print("Failed to fetch start page.")
+        return
 
     s = BeautifulSoup(h1, 'html.parser')
     lnk = s.find('link', rel='amphtml')
-    if not lnk: return
+    if not lnk: 
+        print("AMP link not found.")
+        return
     amp = lnk.get('href')
 
     h2 = get_src(amp)
-    if not h2: return
+    if not h2: 
+        print("Failed to fetch AMP page.")
+        return
 
     m = re.search(r'\[src\]="appState\.currentIframe".*?src="(https?://[^"]+)"', h2, re.DOTALL)
-    if not m: return
+    if not m: 
+        print("Iframe src not found.")
+        return
     ifr = m.group(1)
 
     h3 = get_src(ifr, ref=amp)
-    if not h3: return
+    if not h3: 
+        print("Failed to fetch iframe content.")
+        return
 
     bm = re.search(r'baseUrls\s*=\s*\[(.*?)\]', h3, re.DOTALL)
-    if not bm: return
+    if not bm: 
+        print("Base URLs not found.")
+        return
 
     cl = bm.group(1).replace('"', '').replace("'", "").replace("\n", "").replace("\r", "")
     srvs = [x.strip() for x in cl.split(',') if x.strip().startswith("http")]
-    srvs = list(set(srvs)) # Benzersiz yap
+    srvs = list(set(srvs))  # Benzersiz yap
 
     active_servers = []
     tid = "androstreamlivebs1" 
 
-    # Tüm sunucuları test et
     for sv in srvs:
         sv = sv.rstrip('/')
         turl = f"{sv}/{tid}.m3u8" if "checklist" in sv else f"{sv}/checklist/{tid}.m3u8"
         turl = turl.replace("checklist//", "checklist/")
-        
         try:
             headers['Referer'] = ifr
-            tr = requests.get(PROXY + turl, headers=headers, verify=False, timeout=5)
+            tr = requests.get(PROXY + turl, headers=headers, verify=False, timeout=10)
             if tr.status_code == 200:
-                active_servers.append(sv) # Çalışanı listeye ekle
-        except: pass
+                active_servers.append(sv)
+        except: 
+            pass
 
-    if active_servers:
-        with open(FILE_NAME, "w", encoding="utf-8") as f:
-            f.write("#EXTM3U\n")
-            
-            # Bulunan her sunucu için listeyi döngüye sok
-            for srv in active_servers:
-                for cid, cname in channels:
-                    furl = f"{srv}/{cid}.m3u8" if "checklist" in srv else f"{srv}/checklist/{cid}.m3u8"
-                    furl = furl.replace("checklist//", "checklist/")
-                    
-                    line = f'#EXTINF:-1 tvg-id="sport.tr" tvg-name="{cname}" tvg-logo="https://i.hizliresim.com/8xzjgqv.jpg" group-title="Andro-Panel",{cname}\n{furl}\n'
-                    f.write(line)
-                    
-        print(f"{FILE_NAME} Saved ({len(active_servers)} servers found).")
+    if not active_servers:
+        print("No active servers found. Writing all servers anyway.")
+        active_servers = srvs
+
+    with open(FILE_NAME, "w", encoding="utf-8") as f:
+        f.write("#EXTM3U\n")
+        for srv in active_servers:
+            for cid, cname in channels:
+                furl = f"{srv}/{cid}.m3u8" if "checklist" in srv else f"{srv}/checklist/{cid}.m3u8"
+                furl = furl.replace("checklist//", "checklist/")
+                line = f'#EXTINF:-1 tvg-id="sport.tr" tvg-name="{cname}" tvg-logo="https://i.hizliresim.com/8xzjgqv.jpg" group-title="Andro-Panel",{cname}\n{furl}\n'
+                f.write(line)
+
+    print(f"{FILE_NAME} Saved ({len(active_servers)} servers included).")
 
 if __name__ == "__main__":
     main()
