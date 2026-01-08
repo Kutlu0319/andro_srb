@@ -69,6 +69,16 @@ https://gg.poocloud.in/ufc/index.m3u8
 #EXTVLCOPT:http-referrer=https://modistreams.org/embed/seriea/2026-01-08/cre-cag
 #EXTVLCOPT:http-user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
 https://gg.poocloud.in/sa_cre/index.m3u8
+#EXTINF:-1 tvg-logo="https://api.ppv.to/assets/thumb/2e108cc7587992c02495501d0a8c3433-thumbnail.jpg" group-title="FOOTBALL",Paris Saint-Germain vs. Marseille
+#EXTVLCOPT:http-origin=https://modistreams.org
+#EXTVLCOPT:http-referrer=https://modistreams.org/embed/trophee-des-champions/2026-01-08/psg-olm
+#EXTVLCOPT:http-user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+https://gg.poocloud.in/l1_psg/index.m3u8
+#EXTINF:-1 tvg-logo="https://api.ppv.to/assets/thumb/b244653662fed40689b855f60c98054d-thumbnail.jpg" group-title="FOOTBALL",Atlético Madrid vs. Real Madrid
+#EXTVLCOPT:http-origin=https://modistreams.org
+#EXTVLCOPT:http-referrer=https://modistreams.org/embed/spanish-supercup/2026-01-08/atm-rma
+#EXTVLCOPT:http-user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+https://gg.poocloud.in/ll_atm/index.m3u8
 #EXTINF:-1 tvg-logo="https://api.ppv.to/assets/thumb/96eb809059fb5b3afeb6c6bfcba8fdbc-thumbnail.jpg" group-title="FOOTBALL",AC Milan vs. Genoa
 #EXTVLCOPT:http-origin=https://modistreams.org
 #EXTVLCOPT:http-referrer=https://modistreams.org/embed/seriea/2026-01-08/mil-gen
